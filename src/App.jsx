@@ -1,15 +1,13 @@
 import { useDocument } from "automerge-repo-react-hooks";
-import { applyChanges, applyChange } from "./util";
-import { useState } from "react";
+import { applyChange } from "./util";
+import { useAwareness } from "./useAwareness";
 
 export function App({ documentId }) {
   const [doc, changeDoc] = useDocument(documentId);
 
-  // TODO: We actually want an awareness state object,
-  // which holds both our changes (and maybe those of others),
-  // and a way to commit our changes to the document.
-  // Can we just use immer+zustand for this? Will it support Automerge.text changes etc?
-  const [newCount, setNewCount] = useState(null);
+  const states = useAwareness((s) => s.states);
+  const updateState = useAwareness((s) => s.updateState);
+  const newCount = useAwareness((s) => s.states[s.clientId].count);
 
   const count = doc?.count ?? 0;
   return (
@@ -20,27 +18,34 @@ export function App({ documentId }) {
         placeholder={count}
         style={{ color: newCount ? "red" : "black" }}
         onChange={(e) => {
-          setNewCount(e.target.value);
+          updateState((s) => ({
+            count: e.target.value,
+          }));
         }}
       />
-      <span children={count} style={{display:'inline-block',backgroundColor:'silver'}}/>
-      <button
-        onClick={() => {
-          applyChanges(changeDoc, [[["count"], ()=>newCount]]);
-          setNewCount(null);
-        }}
-        children="save applyChanges"
+      <span
+        children={count}
+        style={{ display: "inline-block", backgroundColor: "silver" }}
       />
       <button
-        onClick={() => changeDoc(doc => {
-          applyChange(doc, ["count"], ()=>newCount);
-          setNewCount(null);
-        })}
-        children="save applyChange"
+        onClick={() =>
+          changeDoc((doc) => {
+            if (newCount === undefined) return
+              applyChange(doc, ["count"], () => newCount);
+              updateState((s) => ({ count: undefined }));
+          })
+        }
+        children="commit"
       />
-      <button children="reset" onClick={() => setNewCount(null)} />
+      <button
+        children="reset"
+        onClick={() =>
+          updateState((s) => ({ count: undefined }))
+        }
+      />
       {/* <button children="undo" onClick={() => changeDoc.undo()} /> */}
       {/* <button children="redo" onClick={() => changeDoc.redo()} /> */}
+      <pre>{JSON.stringify(states, null, 2)}</pre>
     </div>
   );
 }
