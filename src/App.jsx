@@ -1,6 +1,8 @@
 import { useDocument } from "automerge-repo-react-hooks";
 import { applyChange } from "./util";
-import { useAwareness } from "./useAwareness";
+import awareness from "./awareness";
+
+const { useAwareness } = awareness({ clientId: 0 });
 
 export function App({ documentId }) {
   const [doc, changeDoc] = useDocument(documentId);
@@ -30,18 +32,16 @@ export function App({ documentId }) {
       <button
         onClick={() =>
           changeDoc((doc) => {
-            if (newCount === undefined) return
-              applyChange(doc, ["count"], () => newCount);
-              updateState((s) => ({ count: undefined }));
+            if (newCount === undefined) return;
+            applyChange(doc, ["count"], () => newCount);
+            updateState((s) => ({ count: undefined }));
           })
         }
         children="commit"
       />
       <button
         children="reset"
-        onClick={() =>
-          updateState((s) => ({ count: undefined }))
-        }
+        onClick={() => updateState((s) => ({ count: undefined }))}
       />
       {/* <button children="undo" onClick={() => changeDoc.undo()} /> */}
       {/* <button children="redo" onClick={() => changeDoc.redo()} /> */}
