@@ -1,17 +1,17 @@
 import { useDocument } from "automerge-repo-react-hooks";
 import { applyChange } from "./util";
-import awareness from "./awareness";
-
-const { useAwareness } = awareness({ clientId: 0 });
+import { useLocalAwareness, usePeerAwareness } from "./awareness";
 
 export function App({ documentId }) {
   const [doc, changeDoc] = useDocument(documentId);
 
-  const states = useAwareness((s) => s.states);
-  const updateState = useAwareness((s) => s.updateState);
-  const newCount = useAwareness((s) => s.states[s.clientId].count);
+  const channelId = `${documentId}-useAwareness`;
+  const [localState, setLocalState] = useLocalAwareness(channelId, {});
+  const [peerStates, heartbeats] = usePeerAwareness(channelId);
 
+  const newCount = localState?.count;
   const count = doc?.count ?? 0;
+
   return (
     <div>
       <input
@@ -20,9 +20,9 @@ export function App({ documentId }) {
         placeholder={count}
         style={{ color: newCount ? "red" : "black" }}
         onChange={(e) => {
-          updateState((s) => ({
+          setLocalState({
             count: e.target.value,
-          }));
+          });
         }}
       />
       <span
@@ -34,18 +34,17 @@ export function App({ documentId }) {
           changeDoc((doc) => {
             if (newCount === undefined) return;
             applyChange(doc, ["count"], () => newCount);
-            updateState((s) => ({ count: undefined }));
+            setLocalState({});
           })
         }
         children="commit"
       />
-      <button
-        children="reset"
-        onClick={() => updateState((s) => ({ count: undefined }))}
-      />
+      <button children="reset" onClick={() => setLocalState({})} />
       {/* <button children="undo" onClick={() => changeDoc.undo()} /> */}
       {/* <button children="redo" onClick={() => changeDoc.redo()} /> */}
-      <pre>{JSON.stringify(states, null, 2)}</pre>
+      <pre>
+        {JSON.stringify({ localState, peerStates, heartbeats }, null, 2)}
+      </pre>
     </div>
   );
 }
