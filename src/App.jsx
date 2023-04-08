@@ -7,7 +7,11 @@ export function App({ documentId, userId }) {
   const [doc, changeDoc] = useDocument(documentId);
 
   const channelId = `${documentId}-useAwareness`;
-  const [localState, setLocalState] = useLocalAwareness(userId, channelId, {});
+  const [localState, updateLocalState] = useLocalAwareness(
+    userId,
+    channelId,
+    {}
+  );
   const [peerStates, heartbeats] = useRemoteAwareness(channelId, {
     localUserId: userId,
   });
@@ -22,11 +26,12 @@ export function App({ documentId, userId }) {
         value={newCount ?? count}
         placeholder={count}
         style={{ color: newCount ? "red" : "black" }}
-        onChange={(e) => {
-          setLocalState({
+        onChange={(e) =>
+          updateLocalState((state) => ({
+            ...state,
             count: e.target.value,
-          });
-        }}
+          }))
+        }
       />
       <div>
         Doc state:
@@ -52,14 +57,16 @@ export function App({ documentId, userId }) {
           changeDoc((doc) => {
             if (newCount === undefined) return;
             applyChange(doc, ["count"], () => newCount);
-            setLocalState({});
+            updateLocalState((state) => ({ ...state, count: undefined }));
           })
         }
         disabled={newCount === undefined}
         children="commit"
       />
       <button
-        onClick={() => setLocalState({})}
+        onClick={() =>
+          updateLocalState((state) => ({ ...state, count: undefined }))
+        }
         disabled={newCount === undefined}
         children="reset"
       />
