@@ -1,12 +1,16 @@
 import { useRepo } from "automerge-repo-react-hooks";
 import { useEffect } from "react";
 import useStateRef from "react-usestateref";
+import EventEmitter from "eventemitter3";
+
+// Emits new_peer event when a new peer is seen
+export const peerEvents = new EventEmitter();
 
 export const useRemoteAwareness = (
   channelId,
   {
-    offlineTimeout = 3000,
     localUserId, // Optional: BroadcastChannel sometimes sends us our own messages, this filters them
+    offlineTimeout = 3000,
     getTime = () => new Date().getTime(),
   } = {}
 ) => {
@@ -19,6 +23,7 @@ export const useRemoteAwareness = (
         if (event.channelId !== channelId) return;
         const [userId, state] = event.data;
         if (userId === localUserId) return;
+        if (!heartbeatsRef.current[userId]) peerEvents.emit("new_peer", event);
         setPeerStates({
           ...peerStatesRef.current,
           [userId]: state,

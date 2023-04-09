@@ -14,6 +14,7 @@
     "automerge-repo-network-localfirstrelay": "file:../automerge-repo/packages/automerge-repo-network-localfirstrelay",
     "automerge-repo-network-websocket": "^0.0.50",
     "automerge-repo-react-hooks": "^0.0.50",
+    "eventemitter3": "^5.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-usestateref": "^1.0.8",

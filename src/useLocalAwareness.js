@@ -1,6 +1,7 @@
 import { useRepo } from "automerge-repo-react-hooks";
 import { useEffect } from "react";
 import useStateRef from "react-usestateref";
+import { peerEvents } from "./useRemoteAwareness";
 
 export const useLocalAwareness = (
   userId,
@@ -9,18 +10,20 @@ export const useLocalAwareness = (
   { heartbeatTime = 15000 } = {}
 ) => {
   const [localState, setLocalState, localStateRef] = useStateRef(initialState);
+
   const { ephemeralData, networkSubsystem } = useRepo();
   // TODO: When useRemoteAwareness sees a new peer, send current state
 
-  // Apply updater function to state
   // TODO: Send deltas
-  const updateState = (updater) => {
-    const state = updater(localStateRef.current);
+  const setState = (stateOrUpdater) => {
+    const state =
+      typeof stateOrUpdater === "function"
+        ? stateOrUpdater(localStateRef.current)
+        : stateOrUpdater;
     setLocalState(state);
     ephemeralData.broadcast(channelId, [userId, state]);
   };
 
-  // Heartbeats
   useEffect(() => {
     const heartbeat = () =>
       void ephemeralData.broadcast(channelId, [userId, localStateRef.current]);
@@ -30,12 +33,11 @@ export const useLocalAwareness = (
     return () => void clearInterval(heartbeatIntervalId);
   }, [ephemeralData]);
 
-  // Send entire state to new peers
   useEffect(() => {
-    // TODO: Throttle by ~500ms
+    // Send entire state to new peers
     let broadcastTimeoutId;
-    const onPeer = networkSubsystem.on("peer", (e) => {
-      if (e.channelId !== 'sync_channel') return
+    const onPeer = peerEvents.on("new_peer", (e) => {
+      if (e.channelId !== channelId) return;
       broadcastTimeoutId = setTimeout(
         () =>
           void ephemeralData.broadcast(channelId, [
@@ -49,7 +51,7 @@ export const useLocalAwareness = (
       onPeer.off();
       broadcastTimeoutId && clearTimeout(broadcastTimeoutId);
     };
-  }, [networkSubsystem]);
+  }, [peerEvents]);
 
-  return [localState, updateState];
+  return [localState, setState];
 };
