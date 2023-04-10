@@ -10,21 +10,20 @@ export const useLocalAwareness = (
   { heartbeatTime = 15000 } = {}
 ) => {
   const [localState, setLocalState, localStateRef] = useStateRef(initialState);
+  const { ephemeralData } = useRepo();
 
-  const { ephemeralData, networkSubsystem } = useRepo();
-  // TODO: When useRemoteAwareness sees a new peer, send current state
-
-  // TODO: Send deltas
   const setState = (stateOrUpdater) => {
     const state =
       typeof stateOrUpdater === "function"
         ? stateOrUpdater(localStateRef.current)
         : stateOrUpdater;
     setLocalState(state);
+    // TODO: Send deltas
     ephemeralData.broadcast(channelId, [userId, state]);
   };
 
   useEffect(() => {
+    // Send periodic heartbeats
     const heartbeat = () =>
       void ephemeralData.broadcast(channelId, [userId, localStateRef.current]);
     heartbeat(); // Initial heartbeat
@@ -36,7 +35,7 @@ export const useLocalAwareness = (
   useEffect(() => {
     // Send entire state to new peers
     let broadcastTimeoutId;
-    const onPeer = peerEvents.on("new_peer", (e) => {
+    const newPeerEvents = peerEvents.on("new_peer", (e) => {
       if (e.channelId !== channelId) return;
       broadcastTimeoutId = setTimeout(
         () =>
@@ -48,7 +47,7 @@ export const useLocalAwareness = (
       );
     });
     return () => {
-      onPeer.off();
+      newPeerEvents.off();
       broadcastTimeoutId && clearTimeout(broadcastTimeoutId);
     };
   }, [peerEvents]);
